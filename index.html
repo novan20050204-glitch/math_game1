@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代數特工：置換密碼戰 | Algebra Agent</title>
+<meta name="description" content="二元一次聯立方程式互動學習遊戲——定義概念與代入消去法">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   ROOT & RESET
+   ═══════════════════════════════════════════ */
+:root {
+  --bg-deep: #070b14;
+  --bg-card: rgba(255,255,255,0.04);
+  --bg-card-hover: rgba(255,255,255,0.08);
+  --cyan: #00e5ff;
+  --cyan-glow: rgba(0,229,255,0.4);
+  --green: #00ff88;
+  --green-glow: rgba(0,255,136,0.4);
+  --orange: #ff9f43;
+  --orange-glow: rgba(255,159,67,0.4);
+  --red: #ff3366;
+  --red-glow: rgba(255,51,102,0.4);
+  --purple: #a855f7;
+  --purple-glow: rgba(168,85,247,0.4);
+  --gold: #ffd700;
+  --text-primary: #e8ecf1;
+  --text-secondary: #8892a4;
+  --text-dim: #4a5568;
+  --glass-border: rgba(255,255,255,0.08);
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Noto Sans TC', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { font-size:16px; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════
+   PARTICLE CANVAS
+   ═══════════════════════════════════════════ */
+#particle-canvas {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+}
+
+/* ═══════════════════════════════════════════
+   SCREEN SYSTEM
+   ═══════════════════════════════════════════ */
+.screen {
+  position:fixed; inset:0; z-index:10;
+  display:none; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:1.5rem;
+  opacity:0;
+  transition: opacity 0.6s ease;
+}
+.screen.active { display:flex; opacity:1; }
+.screen.fade-out { opacity:0; }
+
+/* ═══════════════════════════════════════════
+   GLASS CARD
+   ═══════════════════════════════════════════ */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  max-width: 700px;
+  width:100%;
+  position:relative;
+  overflow:hidden;
+}
+.glass-card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.3), transparent);
+}
+
+/* ═══════════════════════════════════════════
+   TYPOGRAPHY
+   ═══════════════════════════════════════════ */
+.title-main {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 5vw, 2.8rem);
+  font-weight:900;
+  text-align:center;
+  background: linear-gradient(135deg, var(--cyan), var(--purple), var(--cyan));
+  background-size:200% 200%;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation: gradientShift 4s ease infinite;
+  text-shadow: 0 0 40px var(--cyan-glow);
+  margin-bottom:0.5rem;
+}
+.title-sub {
+  font-family: var(--font-display);
+  font-size: clamp(0.65rem, 2vw, 0.85rem);
+  color: var(--text-secondary);
+  text-align:center;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  margin-bottom:2rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--cyan);
+  margin-bottom:1rem;
+  display:flex; align-items:center; gap:0.5rem;
+}
+
+/* ═══════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════ */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:0.5rem;
+  padding: 0.85rem 2rem;
+  border:none; border-radius:12px;
+  font-family: var(--font-body);
+  font-size:1rem; font-weight:700;
+  cursor:pointer;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  position:relative; overflow:hidden;
+  text-decoration:none;
+}
+.btn::after {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  opacity:0; transition: opacity 0.3s;
+}
+.btn:hover::after { opacity:1; }
+.btn:active { transform:scale(0.96); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--cyan), #0099cc);
+  color: #000; box-shadow: 0 4px 24px var(--cyan-glow);
+}
+.btn-primary:hover { box-shadow: 0 6px 32px var(--cyan-glow); transform:translateY(-2px); }
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--cyan);
+  border: 1px solid rgba(0,229,255,0.3);
+}
+.btn-secondary:hover { background: rgba(0,229,255,0.1); border-color: var(--cyan); }
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), #ff8c00);
+  color: #000; box-shadow: 0 4px 24px rgba(255,215,0,0.3);
+}
+
+.btn-sm { padding:0.5rem 1.2rem; font-size:0.85rem; border-radius:8px; }
+
+/* ═══════════════════════════════════════════
+   INPUT
+   ═══════════════════════════════════════════ */
+.input-field {
+  width:100%; padding:0.9rem 1.2rem;
+  background: rgba(0,0,0,0.4);
+  border:1px solid rgba(0,229,255,0.2);
+  border-radius:12px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size:1rem;
+  outline:none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.input-field:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 20px var(--cyan-glow);
+}
+.input-field::placeholder { color: var(--text-dim); }
+
+/* ═══════════════════════════════════════════
+   HUD (top bar during gameplay)
+   ═══════════════════════════════════════════ */
+.hud {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  display:none; align-items:center; justify-content:space-between;
+  padding:0.8rem 1.5rem;
+  background: rgba(7,11,20,0.85);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--glass-border);
+}
+.hud.visible { display:flex; }
+.hud-item {
+  display:flex; align-items:center; gap:0.4rem;
+  font-family: var(--font-mono); font-size:0.85rem;
+}
+.hud-label { color: var(--text-secondary); font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; }
+.hud-value { color: var(--cyan); font-weight:700; }
+.hud-combo { color: var(--gold); }
+.hud-hp { color: var(--green); }
+.hud-timer { color: var(--orange); }
+
+/* ═══════════════════════════════════════════
+   LEVEL 1-1: RADAR SCAN GRID
+   ═══════════════════════════════════════════ */
+.radar-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap:1rem;
+  margin:1.5rem 0;
+  width:100%; max-width:750px;
+}
+.eq-card {
+  padding:1.2rem;
+  background: var(--bg-card);
+  border:2px solid var(--glass-border);
+  border-radius:14px;
+  text-align:center;
+  cursor:pointer;
+  transition: all 0.3s ease;
+  font-family: var(--font-mono);
+  font-size:1.15rem;
+  user-select:none;
+  position:relative;
+}
+.eq-card:hover { background: var(--bg-card-hover); transform:translateY(-3px); }
+.eq-card.selected {
+  border-color: var(--cyan);
+  background: rgba(0,229,255,0.08);
+  box-shadow: 0 0 20px var(--cyan-glow), inset 0 0 20px rgba(0,229,255,0.05);
+}
+.eq-card.correct {
+  border-color: var(--green) !important;
+  background: rgba(0,255,136,0.1) !important;
+  box-shadow: 0 0 20px var(--green-glow) !important;
+}
+.eq-card.wrong {
+  border-color: var(--red) !important;
+  background: rgba(255,51,102,0.1) !important;
+  box-shadow: 0 0 20px var(--red-glow) !important;
+}
+.eq-card .eq-tag {
+  position:absolute; top:6px; right:8px;
+  font-size:0.6rem; color: var(--text-dim);
+  font-family: var(--font-body);
+}
+
+/* ═══════════════════════════════════════════
+   LEVEL 1-2: DUAL RESONANCE
+   ═══════════════════════════════════════════ */
+.circuit-panel {
+  display:flex; flex-direction:column; gap:1rem;
+  align-items:center; margin:1rem 0;
+  width:100%; max-width:600px;
+}
+.circuit-eq {
+  width:100%; padding:1.2rem 1.5rem;
+  background: rgba(0,0,0,0.5);
+  border:2px solid var(--glass-border);
+  border-radius:14px;
+  font-family: var(--font-mono);
+  font-size:1.3rem;
+  text-align:center;
+  display:flex; align-items:center; justify-content:center; gap:1rem;
+  transition: all 0.5s ease;
+}
+.circuit-eq .circuit-light {
+  width:14px; height:14px; border-radius:50%;
+  background:#333; border:2px solid #555;
+  transition: all 0.5s ease;
+  flex-shrink:0;
+}
+.circuit-eq.pass { border-color: var(--green); }
+.circuit-eq.pass .circuit-light {
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green-glow);
+}
+.circuit-eq.fail { border-color: var(--red); }
+.circuit-eq.fail .circuit-light {
+  background: var(--red);
+  box-shadow: 0 0 12px var(--red-glow);
+}
+
+.pair-grid {
+  display:grid; grid-template-columns: repeat(2, 1fr);
+  gap:0.8rem; margin:1rem 0;
+  width:100%; max-width:400px;
+}
+.pair-btn {
+  padding:1rem;
+  background: var(--bg-card);
+  border:2px solid var(--glass-border);
+  border-radius:12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size:1.1rem;
+  cursor:pointer;
+  transition: all 0.3s ease;
+  text-align:center;
+}
+.pair-btn:hover { background: var(--bg-card-hover); border-color: rgba(0,229,255,0.3); transform:translateY(-2px); }
+.pair-btn.chosen {
+  border-color: var(--cyan);
+  background: rgba(0,229,255,0.12);
+  box-shadow: 0 0 16px var(--cyan-glow);
+}
+
+/* ═══════════════════════════════════════════
+   LEVEL 2: SUBSTITUTION
+   ═══════════════════════════════════════════ */
+.sub-equations {
+  display:flex; flex-direction:column; gap:1rem;
+  width:100%; max-width:600px;
+  margin:1rem 0;
+}
+.sub-eq-row {
+  display:flex; align-items:center; gap:0.8rem;
+  padding:1rem 1.2rem;
+  background: rgba(0,0,0,0.4);
+  border:2px solid var(--glass-border);
+  border-radius:14px;
+  font-family: var(--font-mono);
+  font-size:1.2rem;
+  transition: all 0.4s ease;
+  position:relative;
+}
+.sub-eq-label {
+  font-size:0.75rem; color: var(--text-secondary);
+  font-family: var(--font-body);
+  white-space:nowrap;
+}
+.capsule {
+  display:inline-flex; align-items:center; padding:0.3rem 0.8rem;
+  background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(168,85,247,0.15));
+  border:2px solid var(--cyan);
+  border-radius:20px;
+  color: var(--cyan);
+  font-weight:700;
+  cursor:grab;
+  animation: capsulePulse 2s ease infinite;
+  transition: all 0.3s ease;
+  user-select:none;
+  white-space:nowrap;
+}
+.capsule:hover { transform:scale(1.05); box-shadow: 0 0 20px var(--cyan-glow); }
+.capsule.grabbed {
+  cursor:grabbing;
+  box-shadow: 0 0 30px var(--cyan-glow);
+  transform:scale(1.1);
+  z-index:999;
+}
+.capsule.flying {
+  transition: all 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+.drop-target {
+  display:inline-flex; padding:0.3rem 0.8rem;
+  border:2px dashed var(--purple);
+  border-radius:20px;
+  color: var(--purple);
+  font-weight:700;
+  animation: targetPulse 1.5s ease infinite;
+  transition: all 0.3s ease;
+  min-width:2rem; text-align:center;
+  justify-content:center;
+}
+.drop-target.hover-over {
+  background: rgba(168,85,247,0.2);
+  border-color: var(--cyan);
+  transform:scale(1.1);
+}
+.drop-target.filled {
+  border-style:solid;
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,229,255,0.1);
+  animation:none;
+}
+
+.sub-step-panel {
+  width:100%; max-width:600px;
+  padding:1.5rem;
+  background: rgba(0,0,0,0.3);
+  border:1px solid var(--glass-border);
+  border-radius:14px;
+  margin:1rem 0;
+}
+.sub-step-title {
+  font-size:0.85rem; color: var(--orange);
+  font-weight:700; margin-bottom:0.8rem;
+}
+.sub-step-eq {
+  font-family: var(--font-mono);
+  font-size:1.15rem;
+  text-align:center;
+  margin:0.5rem 0;
+  line-height:2;
+}
+.choice-grid {
+  display:grid; grid-template-columns: repeat(2,1fr);
+  gap:0.6rem; margin-top:1rem;
+}
+.choice-btn {
+  padding:0.8rem;
+  background: var(--bg-card);
+  border:2px solid var(--glass-border);
+  border-radius:10px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size:1.05rem;
+  cursor:pointer;
+  transition: all 0.25s ease;
+  text-align:center;
+}
+.choice-btn:hover { border-color: rgba(0,229,255,0.4); background: var(--bg-card-hover); }
+.choice-btn.correct-choice {
+  border-color: var(--green) !important;
+  background: rgba(0,255,136,0.15) !important;
+  color: var(--green) !important;
+}
+.choice-btn.wrong-choice {
+  border-color: var(--red) !important;
+  background: rgba(255,51,102,0.1) !important;
+  color: var(--red) !important;
+}
+
+/* ═══════════════════════════════════════════
+   LEADERBOARD
+   ═══════════════════════════════════════════ */
+.lb-table {
+  width:100%; border-collapse:collapse; margin:1rem 0;
+}
+.lb-table th {
+  font-family: var(--font-display);
+  font-size:0.7rem;
+  color: var(--text-secondary);
+  text-transform:uppercase;
+  letter-spacing:2px;
+  padding:0.8rem 0.5rem;
+  border-bottom:1px solid var(--glass-border);
+  text-align:left;
+}
+.lb-table td {
+  padding:0.7rem 0.5rem;
+  border-bottom:1px solid rgba(255,255,255,0.03);
+  font-size:0.9rem;
+}
+.lb-table tr:hover td { background: rgba(255,255,255,0.02); }
+.lb-rank { font-family: var(--font-display); font-weight:700; }
+.lb-rank.gold { color: var(--gold); }
+.lb-rank.silver { color: #c0c0c0; }
+.lb-rank.bronze { color: #cd7f32; }
+.lb-name { font-weight:700; }
+.lb-score { font-family: var(--font-mono); color: var(--cyan); font-weight:700; }
+.lb-title-cell { font-size:0.8rem; }
+.lb-date { color: var(--text-dim); font-size:0.78rem; }
+.lb-highlight td { background: rgba(0,229,255,0.06) !important; }
+
+/* ═══════════════════════════════════════════
+   SCORE POPUP
+   ═══════════════════════════════════════════ */
+.score-popup {
+  position:fixed;
+  font-family: var(--font-display);
+  font-size:1.5rem;
+  font-weight:900;
+  pointer-events:none;
+  z-index:200;
+  animation: scoreFloat 1.2s ease forwards;
+}
+.score-popup.positive { color: var(--green); text-shadow: 0 0 20px var(--green-glow); }
+.score-popup.negative { color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
+.score-popup.combo { color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.5); }
+
+/* ═══════════════════════════════════════════
+   PROGRESS BAR
+   ═══════════════════════════════════════════ */
+.progress-bar {
+  width:100%; height:6px;
+  background: rgba(255,255,255,0.06);
+  border-radius:3px;
+  margin:1rem 0;
+  overflow:hidden;
+}
+.progress-fill {
+  height:100%;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  border-radius:3px;
+  transition: width 0.5s ease;
+}
+
+/* ═══════════════════════════════════════════
+   RESULT STARS
+   ═══════════════════════════════════════════ */
+.stars-row {
+  display:flex; gap:0.5rem; justify-content:center; margin:1rem 0;
+}
+.star {
+  font-size:2.5rem;
+  opacity:0.2;
+  transform:scale(0.5);
+  transition: all 0.5s cubic-bezier(0.68,-0.55,0.27,1.55);
+}
+.star.earned {
+  opacity:1;
+  transform:scale(1);
+  animation: starBounce 0.6s ease;
+}
+.star.earned.gold { filter: drop-shadow(0 0 12px rgba(255,215,0,0.6)); }
+
+/* ═══════════════════════════════════════════
+   MISC
+   ═══════════════════════════════════════════ */
+.instruction-text {
+  color: var(--text-secondary);
+  font-size:0.92rem;
+  text-align:center;
+  line-height:1.7;
+  margin:0.5rem 0;
+}
+.divider {
+  width:60px; height:2px; margin:1.2rem auto;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+}
+.badge {
+  display:inline-flex; align-items:center; padding:0.2rem 0.6rem;
+  border-radius:6px; font-size:0.75rem; font-weight:700;
+}
+.badge-cyan { background:rgba(0,229,255,0.15); color:var(--cyan); }
+.badge-green { background:rgba(0,255,136,0.15); color:var(--green); }
+.badge-orange { background:rgba(255,159,67,0.15); color:var(--orange); }
+.badge-red { background:rgba(255,51,102,0.15); color:var(--red); }
+
+.btn-row { display:flex; gap:0.8rem; justify-content:center; margin-top:1.5rem; flex-wrap:wrap; }
+.text-center { text-align:center; }
+.mt-1 { margin-top:0.5rem; }
+.mt-2 { margin-top:1rem; }
+.mt-3 { margin-top:1.5rem; }
+.mb-1 { margin-bottom:0.5rem; }
+.gap-sm { gap:0.5rem; }
+
+.final-score-big {
+  font-family:var(--font-display);
+  font-size:clamp(2.5rem,8vw,4rem);
+  font-weight:900;
+  text-align:center;
+  background: linear-gradient(135deg, var(--gold), var(--orange));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  text-shadow: 0 0 40px rgba(255,215,0,0.3);
+}
+.rank-title {
+  font-family:var(--font-display);
+  font-size:1.1rem; text-align:center;
+  color: var(--purple);
+  letter-spacing:2px;
+  margin-top:0.5rem;
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════ */
+@keyframes gradientShift {
+  0%,100% { background-position:0% 50%; }
+  50% { background-position:100% 50%; }
+}
+@keyframes capsulePulse {
+  0%,100% { box-shadow:0 0 8px var(--cyan-glow); }
+  50% { box-shadow:0 0 22px var(--cyan-glow); }
+}
+@keyframes targetPulse {
+  0%,100% { box-shadow:0 0 6px var(--purple-glow); }
+  50% { box-shadow:0 0 18px var(--purple-glow); }
+}
+@keyframes scoreFloat {
+  0% { opacity:1; transform:translateY(0) scale(1); }
+  100% { opacity:0; transform:translateY(-80px) scale(1.3); }
+}
+@keyframes starBounce {
+  0% { transform:scale(0); }
+  60% { transform:scale(1.3); }
+  100% { transform:scale(1); }
+}
+@keyframes shakeX {
+  0%,100% { transform:translateX(0); }
+  20% { transform:translateX(-8px); }
+  40% { transform:translateX(8px); }
+  60% { transform:translateX(-5px); }
+  80% { transform:translateX(5px); }
+}
+@keyframes fadeSlideUp {
+  from { opacity:0; transform:translateY(30px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes borderGlow {
+  0%,100% { border-color: var(--cyan); }
+  50% { border-color: var(--purple); }
+}
+.shake { animation: shakeX 0.5s ease; }
+.fade-slide-up { animation: fadeSlideUp 0.6s ease both; }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media(max-width:600px) {
+  .glass-card { padding:1.5rem 1rem; border-radius:16px; }
+  .radar-grid { grid-template-columns: repeat(2, 1fr); gap:0.7rem; }
+  .eq-card { padding:0.9rem; font-size:0.95rem; }
+  .circuit-eq { font-size:1rem; padding:0.9rem; }
+  .pair-grid { grid-template-columns: repeat(2, 1fr); }
+  .sub-eq-row { font-size:1rem; flex-wrap:wrap; }
+  .hud { padding:0.5rem 0.8rem; font-size:0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+
+<!-- ═══════════════════ HUD ═══════════════════ -->
+<div class="hud" id="hud">
+  <div>
+    <div class="hud-item"><span class="hud-label">分數</span></div>
+    <div class="hud-item"><span class="hud-value" id="hud-score">0</span></div>
+  </div>
+  <div>
+    <div class="hud-item"><span class="hud-label">連擊</span></div>
+    <div class="hud-item"><span class="hud-combo" id="hud-combo">×1</span></div>
+  </div>
+  <div>
+    <div class="hud-item"><span class="hud-label">能量</span></div>
+    <div class="hud-item"><span class="hud-hp" id="hud-hp">❤❤❤❤❤</span></div>
+  </div>
+  <div>
+    <div class="hud-item"><span class="hud-label">時間</span></div>
+    <div class="hud-item"><span class="hud-timer" id="hud-timer">--</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MENU SCREEN ═══════════════════ -->
+<div class="screen active" id="screen-menu">
+  <div class="glass-card text-center">
+    <div style="font-size:3rem; margin-bottom:0.5rem;">🕵️‍♂️</div>
+    <h1 class="title-main">代數特工</h1>
+    <div class="title-sub">Algebra Agent : The Substitution Protocol</div>
+    <div class="divider"></div>
+    <p class="instruction-text">
+      🎯 任務目標：掌握<span style="color:var(--cyan)">二元一次方程式</span>的定義概念<br>
+      與<span style="color:var(--green)">代入消去法</span>的解題技巧
+    </p>
+    <div class="mt-3">
+      <label style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:0.4rem;">輸入你的特工代號</label>
+      <input class="input-field" id="agent-name" type="text" placeholder="例如：MathNinja_007" maxlength="16" autocomplete="off">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-start">🚀 開始任務</button>
+      <button class="btn btn-secondary" id="btn-lb-menu">🏆 排行榜</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ BRIEFING SCREEN (reusable) ═══════════════════ -->
+<div class="screen" id="screen-briefing">
+  <div class="glass-card text-center">
+    <div id="briefing-icon" style="font-size:2.5rem; margin-bottom:0.5rem;"></div>
+    <div class="section-title" style="justify-content:center;" id="briefing-title"></div>
+    <div class="divider"></div>
+    <p class="instruction-text" id="briefing-text"></p>
+    <div class="mt-2" id="briefing-details"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-briefing-go">⚡ 進入任務</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ LEVEL 1-1: RADAR SCAN ═══════════════════ -->
+<div class="screen" id="screen-l11">
+  <div class="section-title" style="justify-content:center; margin-bottom:0.3rem;">
+    <span class="badge badge-cyan">LEVEL 1-1</span> 代數雷達掃描
+  </div>
+  <p class="instruction-text mb-1">從以下方程式中，點選所有<b style="color:var(--cyan)">合格的二元一次方程式</b>！</p>
+  <div class="progress-bar"><div class="progress-fill" id="l11-progress" style="width:0%"></div></div>
+  <div class="radar-grid" id="radar-grid"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btn-l11-confirm">📡 掃描確認</button>
+  </div>
+  <div id="l11-feedback" class="mt-2 instruction-text" style="min-height:1.5rem;"></div>
+</div>
+
+<!-- ═══════════════════ LEVEL 1-2: DUAL RESONANCE ═══════════════════ -->
+<div class="screen" id="screen-l12">
+  <div class="section-title" style="justify-content:center; margin-bottom:0.3rem;">
+    <span class="badge badge-green">LEVEL 1-2</span> 雙重共鳴鎖
+  </div>
+  <p class="instruction-text mb-1">找出<b style="color:var(--green)">同時滿足兩道電路</b>的能量數對 (x, y) ！</p>
+  <div class="progress-bar"><div class="progress-fill" id="l12-progress" style="width:0%"></div></div>
+  <div id="l12-round-label" class="instruction-text" style="color:var(--orange);font-weight:700;"></div>
+  <div class="circuit-panel" id="l12-circuits"></div>
+  <div class="pair-grid" id="l12-pairs"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btn-l12-test">🔌 通電測試</button>
+  </div>
+  <div id="l12-feedback" class="mt-2 instruction-text" style="min-height:1.5rem;"></div>
+</div>
+
+<!-- ═══════════════════ LEVEL 2: SUBSTITUTION ═══════════════════ -->
+<div class="screen" id="screen-l2">
+  <div class="section-title" style="justify-content:center; margin-bottom:0.3rem;">
+    <span class="badge badge-orange">LEVEL 2</span> 晶片替身置換
+  </div>
+  <p class="instruction-text mb-1" id="l2-instruction">點擊藍色膠囊，再點擊紫色目標完成代入！</p>
+  <div class="progress-bar"><div class="progress-fill" id="l2-progress" style="width:0%"></div></div>
+  <div id="l2-round-label" class="instruction-text" style="color:var(--orange);font-weight:700;"></div>
+  <div class="sub-equations" id="l2-equations"></div>
+  <div id="l2-step-area"></div>
+  <div id="l2-feedback" class="mt-2 instruction-text" style="min-height:1.5rem;"></div>
+</div>
+
+<!-- ═══════════════════ LEVEL RESULT ═══════════════════ -->
+<div class="screen" id="screen-level-result">
+  <div class="glass-card text-center">
+    <div id="lr-icon" style="font-size:2.5rem;margin-bottom:0.5rem;"></div>
+    <div class="section-title" style="justify-content:center;" id="lr-title"></div>
+    <div class="stars-row" id="lr-stars"></div>
+    <div id="lr-details" class="instruction-text"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-lr-next"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ FINAL RESULT ═══════════════════ -->
+<div class="screen" id="screen-final">
+  <div class="glass-card text-center">
+    <div style="font-size:3rem; margin-bottom:0.5rem;">🏆</div>
+    <div class="section-title" style="justify-content:center;">任務完成！</div>
+    <div class="divider"></div>
+    <div class="final-score-big" id="final-score">0</div>
+    <div class="rank-title" id="final-rank"></div>
+    <div class="stars-row" id="final-stars"></div>
+    <div id="final-details" class="instruction-text mt-2"></div>
+    <div class="btn-row">
+      <button class="btn btn-gold" id="btn-final-lb">🏆 查看排行榜</button>
+      <button class="btn btn-secondary" id="btn-final-retry">🔄 再來一次</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ LEADERBOARD ═══════════════════ -->
+<div class="screen" id="screen-leaderboard">
+  <div class="glass-card">
+    <div class="text-center">
+      <div style="font-size:2rem;margin-bottom:0.3rem;">🏆</div>
+      <div class="section-title" style="justify-content:center;">特工排行榜</div>
+    </div>
+    <div class="divider"></div>
+    <div id="lb-content" style="overflow-x:auto;"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-lb-back">🔙 返回</button>
+      <button class="btn btn-secondary" id="btn-lb-clear">🗑️ 清除紀錄</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<script>
+/* ═══════════════════════════════════════════
+   AUDIO SYSTEM (Web Audio API)
+   ═══════════════════════════════════════════ */
+const AudioSys = (() => {
+  let ctx;
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx;
+  }
+  function play(freq, dur, type='sine', vol=0.15) {
+    try {
+      const c = getCtx(), o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(); o.stop(c.currentTime + dur);
+    } catch(e) {}
+  }
+  return {
+    correct() { play(880,0.1); setTimeout(()=>play(1100,0.15),100); setTimeout(()=>play(1320,0.2),200); },
+    wrong() { play(200,0.2,'sawtooth',0.1); setTimeout(()=>play(150,0.3,'sawtooth',0.08),150); },
+    click() { play(600,0.05,'sine',0.08); },
+    combo() { play(1200,0.08); setTimeout(()=>play(1500,0.08),80); setTimeout(()=>play(1800,0.15),160); },
+    levelUp() {
+      [660,880,1100,1320,1760].forEach((f,i) => setTimeout(()=>play(f,0.15,'sine',0.12), i*100));
+    },
+    substitute() {
+      play(400,0.15,'sine',0.1);
+      setTimeout(()=>play(600,0.15),120);
+      setTimeout(()=>play(900,0.2),240);
+    },
+    victory() {
+      const notes = [523,659,784,1047,784,1047,1319];
+      notes.forEach((f,i) => setTimeout(()=>play(f,0.2,'sine',0.12), i*120));
+    }
+  };
+})();
+
+/* ═══════════════════════════════════════════
+   PARTICLE BACKGROUND
+   ═══════════════════════════════════════════ */
+(() => {
+  const canvas = document.getElementById('particle-canvas');
+  const c = canvas.getContext('2d');
+  let W, H, particles = [];
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+  class P {
+    constructor() { this.reset(); }
+    reset() {
+      this.x = Math.random()*W; this.y = Math.random()*H;
+      this.vx = (Math.random()-0.5)*0.3; this.vy = (Math.random()-0.5)*0.3;
+      this.r = Math.random()*1.5+0.3;
+      this.a = Math.random()*0.4+0.1;
+      const colors = ['0,229,255','0,255,136','168,85,247'];
+      this.color = colors[Math.floor(Math.random()*colors.length)];
+    }
+    update() {
+      this.x += this.vx; this.y += this.vy;
+      if(this.x<0||this.x>W||this.y<0||this.y>H) this.reset();
+    }
+    draw() {
+      c.beginPath(); c.arc(this.x,this.y,this.r,0,Math.PI*2);
+      c.fillStyle = `rgba(${this.color},${this.a})`;
+      c.fill();
+    }
+  }
+  for(let i=0;i<80;i++) particles.push(new P());
+  function loop() {
+    c.clearRect(0,0,W,H);
+    particles.forEach(p => { p.update(); p.draw(); });
+    // draw connections
+    for(let i=0;i<particles.length;i++){
+      for(let j=i+1;j<particles.length;j++){
+        const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<120){
+          c.beginPath(); c.moveTo(particles[i].x,particles[i].y); c.lineTo(particles[j].x,particles[j].y);
+          c.strokeStyle=`rgba(0,229,255,${0.06*(1-d/120)})`;
+          c.lineWidth=0.5; c.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ═══════════════════════════════════════════
+   GAME ENGINE
+   ═══════════════════════════════════════════ */
+const Game = (() => {
+  // --- state ---
+  let agentName = '';
+  let score = 0;
+  let combo = 0;
+  let hp = 5;
+  let maxHP = 5;
+  let currentScreen = 'screen-menu';
+  let timerInterval = null;
+  let timeLeft = 0;
+
+  // --- level data ---
+  const L11_EQUATIONS = [
+    { text: '2x + 3y = 8', valid: true, reason: '含 x、y 兩個未知數，次數皆為 1 ✓' },
+    { text: 'x − y = 0', valid: true, reason: '含 x、y，次數為 1，有等號 ✓' },
+    { text: '−5x + 4y = 12', valid: true, reason: '係數可以是負數，仍是二元一次 ✓' },
+    { text: 'x + 7y = −3', valid: true, reason: '常數項可以是負數 ✓' },
+    { text: '3x − 2y = 1', valid: true, reason: '標準的二元一次方程式 ✓' },
+    { text: 'x² + y = 6', valid: false, reason: 'x 的次數為 2，不是一次 ✗' },
+    { text: 'xy = 10', valid: false, reason: 'xy 相乘後次數為 2（二次項）✗' },
+    { text: '2x + 3 = 0', valid: false, reason: '只有 x 一個未知數，不是二元 ✗' },
+  ];
+
+  const L12_ROUNDS = [
+    {
+      eq1: { text: 'x + y = 5', fn: (x,y) => x+y===5 },
+      eq2: { text: 'x − y = 1', fn: (x,y) => x-y===1 },
+      options: [[1,4],[2,3],[3,2],[4,1]],
+      answer: [3,2]
+    },
+    {
+      eq1: { text: '2x + y = 7', fn: (x,y) => 2*x+y===7 },
+      eq2: { text: 'x − y = 2', fn: (x,y) => x-y===2 },
+      options: [[2,3],[3,1],[1,5],[4,-1]],
+      answer: [3,1]
+    },
+    {
+      eq1: { text: 'x + 2y = 8', fn: (x,y) => x+2*y===8 },
+      eq2: { text: '3x − y = 3', fn: (x,y) => 3*x-y===3 },
+      options: [[1,4],[4,2],[2,3],[3,1]],
+      answer: [2,3]
+    }
+  ];
+
+  const L2_ROUNDS = [
+    {
+      eq1: { label: '①', text: 'y = 2x − 1', var: 'y', expr: '2x − 1' },
+      eq2: { label: '②', textBefore: '3x + 2', targetVar: 'y', textAfter: ' = 12' },
+      substituted: '3x + 2(2x − 1) = 12',
+      expanded: '3x + 4x − 2 = 12 → 7x = 14',
+      solveVar: 'x', solveVal: 2, solveChoices: [1,2,3,4],
+      backVar: 'y', backVal: 3, backChoices: [1,2,3,5],
+      backExpr: 'y = 2(2) − 1 = 3'
+    },
+    {
+      eq1: { label: '①', text: 'x = y + 3', var: 'x', expr: 'y + 3' },
+      eq2: { label: '②', textBefore: '2', targetVar: 'x', textAfter: ' + 3y = 16' },
+      substituted: '2(y + 3) + 3y = 16',
+      expanded: '2y + 6 + 3y = 16 → 5y = 10',
+      solveVar: 'y', solveVal: 2, solveChoices: [1,2,3,4],
+      backVar: 'x', backVal: 5, backChoices: [3,4,5,6],
+      backExpr: 'x = (2) + 3 = 5'
+    },
+    {
+      eq1: { label: '①', text: 'y = −x + 7', var: 'y', expr: '−x + 7' },
+      eq2: { label: '②', textBefore: '3x − 2', targetVar: 'y', textAfter: ' = 1' },
+      substituted: '3x − 2(−x + 7) = 1',
+      expanded: '3x + 2x − 14 = 1 → 5x = 15',
+      solveVar: 'x', solveVal: 3, solveChoices: [2,3,4,5],
+      backVar: 'y', backVal: 4, backChoices: [3,4,5,6],
+      backExpr: 'y = −(3) + 7 = 4'
+    }
+  ];
+
+  // --- L1-2 state ---
+  let l12Round = 0;
+  let l12Selected = null;
+  let l12Locked = false;
+
+  // --- L2 state ---
+  let l2Round = 0;
+  let l2Step = 0; // 0=drag, 1=solve, 2=back, 3=done
+  let l2CapsuleGrabbed = false;
+
+  // --- DOM helpers ---
+  const $ = id => document.getElementById(id);
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => {
+      if (s.classList.contains('active')) {
+        s.classList.add('fade-out');
+        setTimeout(() => { s.classList.remove('active','fade-out'); }, 350);
+      }
+    });
+    setTimeout(() => {
+      $(id).classList.add('active');
+      currentScreen = id;
+    }, 360);
+  }
+
+  function updateHUD() {
+    $('hud-score').textContent = score;
+    $('hud-combo').textContent = combo > 1 ? `×${combo}` : '×1';
+    $('hud-hp').textContent = '❤'.repeat(Math.max(0,hp)) + '🖤'.repeat(Math.max(0,maxHP-hp));
+    $('hud-timer').textContent = timeLeft > 0 ? `${timeLeft}s` : '--';
+  }
+
+  function showHUD(show) {
+    $('hud').classList.toggle('visible', show);
+  }
+
+  function addScore(pts, x, y) {
+    const multiplied = pts * Math.max(1, combo);
+    score += multiplied;
+    updateHUD();
+    spawnScorePopup(multiplied > 0 ? `+${multiplied}` : `${multiplied}`, x, y, multiplied > 0);
+    if (pts > 0 && combo > 2) AudioSys.combo();
+  }
+
+  function streakHit() { combo++; updateHUD(); }
+  function streakBreak() { combo = 0; updateHUD(); }
+
+  function loseHP() {
+    hp = Math.max(0, hp - 1);
+    updateHUD();
+  }
+
+  function spawnScorePopup(text, x, y, positive) {
+    const el = document.createElement('div');
+    el.className = `score-popup ${positive ? 'positive' : 'negative'}`;
+    el.textContent = text;
+    el.style.left = `${x}px`; el.style.top = `${y}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1300);
+  }
+
+  function startTimer(seconds, onTick, onEnd) {
+    timeLeft = seconds;
+    updateHUD();
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      updateHUD();
+      if (onTick) onTick(timeLeft);
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        if (onEnd) onEnd();
+      }
+    }, 1000);
+  }
+  function stopTimer() { clearInterval(timerInterval); timeLeft=0; updateHUD(); }
+
+  function getRankTitle(s) {
+    if (s >= 2800) return '🌟 傳說代數特工';
+    if (s >= 2200) return '💎 王牌特工';
+    if (s >= 1600) return '🥇 菁英特工';
+    if (s >= 1000) return '🥈 高級特工';
+    if (s >= 500) return '🥉 初級特工';
+    return '🔰 實習特工';
+  }
+
+  function getStars(s, max) {
+    const pct = s / max;
+    if (pct >= 0.9) return 3;
+    if (pct >= 0.6) return 2;
+    if (pct >= 0.3) return 1;
+    return 0;
+  }
+
+  function renderStars(container, count) {
+    container.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const span = document.createElement('span');
+      span.className = 'star';
+      span.textContent = '⭐';
+      if (i < count) {
+        setTimeout(() => { span.classList.add('earned','gold'); }, 300 + i*400);
+      }
+      container.appendChild(span);
+    }
+  }
+
+  function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  /* ─── LEADERBOARD (localStorage) ─── */
+  const LB_KEY = 'algebra_agent_leaderboard';
+  function getLeaderboard() {
+    try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch { return []; }
+  }
+  function saveToLeaderboard(name, sc) {
+    const lb = getLeaderboard();
+    lb.push({
+      name,
+      score: sc,
+      rank: getRankTitle(sc),
+      date: new Date().toLocaleDateString('zh-TW')
+    });
+    lb.sort((a,b) => b.score - a.score);
+    if (lb.length > 20) lb.length = 20;
+    localStorage.setItem(LB_KEY, JSON.stringify(lb));
+    return lb;
+  }
+  function clearLeaderboard() {
+    localStorage.removeItem(LB_KEY);
+  }
+  function renderLeaderboard(highlightName, highlightScore) {
+    const lb = getLeaderboard();
+    const container = $('lb-content');
+    if (!lb.length) {
+      container.innerHTML = '<p class="instruction-text mt-2">還沒有任何紀錄，快來挑戰吧！</p>';
+      return;
+    }
+    let html = `<table class="lb-table"><thead><tr>
+      <th>#</th><th>特工代號</th><th>分數</th><th>階級</th><th>日期</th>
+    </tr></thead><tbody>`;
+    lb.forEach((entry, i) => {
+      const rankCls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+      const isHL = entry.name===highlightName && entry.score===highlightScore;
+      html += `<tr class="${isHL?'lb-highlight':''}">
+        <td class="lb-rank ${rankCls}">${i<3?['🥇','🥈','🥉'][i]:i+1}</td>
+        <td class="lb-name">${escHTML(entry.name)}</td>
+        <td class="lb-score">${entry.score}</td>
+        <td class="lb-title-cell">${entry.rank}</td>
+        <td class="lb-date">${entry.date}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+  function escHTML(s) { const d = document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  /* ═══════════════════════════════════════════
+     LEVEL 1-1: RADAR SCAN
+     ═══════════════════════════════════════════ */
+  let l11Shuffled = [];
+  let l11Submitted = false;
+
+  function initL11() {
+    l11Submitted = false;
+    l11Shuffled = shuffleArray(L11_EQUATIONS);
+    const grid = $('radar-grid');
+    grid.innerHTML = '';
+    l11Shuffled.forEach((eq, i) => {
+      const card = document.createElement('div');
+      card.className = 'eq-card fade-slide-up';
+      card.style.animationDelay = `${i*0.08}s`;
+      card.innerHTML = `<span>${eq.text}</span>`;
+      card.dataset.index = i;
+      card.addEventListener('click', () => {
+        if (l11Submitted) return;
+        AudioSys.click();
+        card.classList.toggle('selected');
+      });
+      grid.appendChild(card);
+    });
+    $('l11-progress').style.width = '33%';
+    $('l11-feedback').textContent = '';
+    showScreen('screen-l11');
+  }
+
+  function submitL11() {
+    if (l11Submitted) return;
+    l11Submitted = true;
+    AudioSys.click();
+
+    const cards = $('radar-grid').children;
+    let correctCount = 0, wrongCount = 0;
+    const totalValid = l11Shuffled.filter(e=>e.valid).length;
+
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      const eq = l11Shuffled[i];
+      const selected = card.classList.contains('selected');
+
+      if (eq.valid && selected) {
+        card.classList.add('correct');
+        correctCount++;
+      } else if (!eq.valid && !selected) {
+        card.classList.add('correct');
+        correctCount++;
+      } else {
+        card.classList.add('wrong');
+        wrongCount++;
+      }
+
+      // add tooltip
+      const tag = document.createElement('div');
+      tag.className = 'eq-tag';
+      tag.textContent = eq.valid ? '✓ 合格' : '✗ 不合格';
+      tag.style.color = eq.valid ? 'var(--green)' : 'var(--red)';
+      card.appendChild(tag);
+    }
+
+    // scoring
+    const rect = $('btn-l11-confirm').getBoundingClientRect();
+    const mx = rect.left + rect.width/2, my = rect.top;
+    const pts = correctCount * 100 - wrongCount * 50;
+    if (pts > 0) { streakHit(); AudioSys.correct(); }
+    else { streakBreak(); AudioSys.wrong(); }
+    addScore(Math.max(0, pts), mx, my);
+
+    // feedback
+    const fb = $('l11-feedback');
+    fb.innerHTML = wrongCount === 0
+      ? '🎯 完美掃描！全部判斷正確！'
+      : `掃描完成：${correctCount} 項正確，${wrongCount} 項錯誤`;
+
+    // auto advance
+    $('btn-l11-confirm').textContent = '➡️ 下一關';
+    $('btn-l11-confirm').onclick = () => briefingL12();
+  }
+
+  /* ═══════════════════════════════════════════
+     LEVEL 1-2: DUAL RESONANCE
+     ═══════════════════════════════════════════ */
+  function briefingL12() {
+    $('briefing-icon').textContent = '🔌';
+    $('briefing-title').textContent = 'LEVEL 1-2：雙重共鳴鎖';
+    $('briefing-text').innerHTML = `
+      基地大門有<b style="color:var(--green)">兩道電路方程式</b>，<br>
+      你必須找出<span style="color:var(--cyan)">同時讓兩道電路亮綠燈</span>的能量數對 <b>(x, y)</b>。<br><br>
+      💡 <b>關鍵概念</b>：聯立方程式的解 ＝ 同時滿足所有方程式的那組數值！
+    `;
+    $('briefing-details').innerHTML = `<span class="badge badge-green">共 ${L12_ROUNDS.length} 道鎖</span>`;
+    $('btn-briefing-go').onclick = () => { l12Round = 0; initL12Round(); };
+    showScreen('screen-briefing');
+  }
+
+  function initL12Round() {
+    l12Selected = null;
+    l12Locked = false;
+    const rd = L12_ROUNDS[l12Round];
+    $('l12-progress').style.width = `${((l12Round) / L12_ROUNDS.length) * 100}%`;
+    $('l12-round-label').textContent = `第 ${l12Round+1} / ${L12_ROUNDS.length} 道鎖`;
+
+    // circuits
+    const cp = $('l12-circuits');
+    cp.innerHTML = `
+      <div class="circuit-eq" id="l12-eq1">
+        <span class="circuit-light"></span>
+        <span>電路 ① &nbsp; ${rd.eq1.text}</span>
+        <span class="circuit-light"></span>
+      </div>
+      <div class="circuit-eq" id="l12-eq2">
+        <span class="circuit-light"></span>
+        <span>電路 ② &nbsp; ${rd.eq2.text}</span>
+        <span class="circuit-light"></span>
+      </div>
+    `;
+
+    // pairs
+    const pg = $('l12-pairs');
+    pg.innerHTML = '';
+    const shuffled = shuffleArray(rd.options);
+    shuffled.forEach(pair => {
+      const btn = document.createElement('button');
+      btn.className = 'pair-btn';
+      btn.textContent = `(${pair[0]}, ${pair[1]})`;
+      btn.dataset.x = pair[0]; btn.dataset.y = pair[1];
+      btn.addEventListener('click', () => {
+        if (l12Locked) return;
+        AudioSys.click();
+        pg.querySelectorAll('.pair-btn').forEach(b => b.classList.remove('chosen'));
+        btn.classList.add('chosen');
+        l12Selected = pair;
+      });
+      pg.appendChild(btn);
+    });
+
+    $('l12-feedback').textContent = '';
+    $('btn-l12-test').textContent = '🔌 通電測試';
+    $('btn-l12-test').onclick = testL12;
+    showScreen('screen-l12');
+  }
+
+  function testL12() {
+    if (!l12Selected || l12Locked) return;
+    l12Locked = true;
+    const rd = L12_ROUNDS[l12Round];
+    const [x, y] = l12Selected;
+    const pass1 = rd.eq1.fn(x, y);
+    const pass2 = rd.eq2.fn(x, y);
+
+    $('l12-eq1').className = `circuit-eq ${pass1 ? 'pass' : 'fail'}`;
+    $('l12-eq2').className = `circuit-eq ${pass2 ? 'pass' : 'fail'}`;
+
+    const rect = $('btn-l12-test').getBoundingClientRect();
+    const mx = rect.left + rect.width/2, my = rect.top;
+
+    if (pass1 && pass2) {
+      // success
+      AudioSys.correct(); streakHit();
+      addScore(200, mx, my);
+      $('l12-feedback').innerHTML = `✅ 雙重共鳴成功！(${x}, ${y}) 同時滿足兩道方程式！`;
+      $('l12-progress').style.width = `${((l12Round+1) / L12_ROUNDS.length) * 100}%`;
+
+      setTimeout(() => {
+        l12Round++;
+        if (l12Round < L12_ROUNDS.length) {
+          initL12Round();
+        } else {
+          showLevelResult('level1');
+        }
+      }, 1800);
+    } else {
+      // fail
+      AudioSys.wrong(); streakBreak(); loseHP();
+      addScore(-50, mx, my);
+      const reasons = [];
+      if (!pass1) reasons.push(`電路① ${rd.eq1.text}：${x} 代入不成立`);
+      if (!pass2) reasons.push(`電路② ${rd.eq2.text}：${x} 代入不成立`);
+      $('l12-feedback').innerHTML = `❌ 共鳴失敗！${reasons.join('；')}<br>再試一次！`;
+      $('l12-eq1').classList.add('shake');
+      $('l12-eq2').classList.add('shake');
+      setTimeout(() => {
+        l12Locked = false;
+        l12Selected = null;
+        $('l12-pairs').querySelectorAll('.pair-btn').forEach(b => b.classList.remove('chosen'));
+        $('l12-eq1').className = 'circuit-eq';
+        $('l12-eq2').className = 'circuit-eq';
+      }, 1500);
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     LEVEL RESULT (between levels)
+     ═══════════════════════════════════════════ */
+  function showLevelResult(level) {
+    stopTimer();
+    AudioSys.levelUp();
+    if (level === 'level1') {
+      $('lr-icon').textContent = '🛡️';
+      $('lr-title').textContent = '第一章完成：定義與概念';
+      renderStars($('lr-stars'), getStars(score, 1500));
+      $('lr-details').innerHTML = `
+        目前得分：<b style="color:var(--cyan)">${score}</b><br>
+        你已經掌握了二元一次方程式的定義與解的概念！<br>
+        接下來進入<span style="color:var(--orange)">代入消去法</span>的實戰訓練！
+      `;
+      $('btn-lr-next').textContent = '⚡ 進入第二章';
+      $('btn-lr-next').onclick = briefingL2;
+    }
+    showScreen('screen-level-result');
+  }
+
+  /* ═══════════════════════════════════════════
+     LEVEL 2: SUBSTITUTION
+     ═══════════════════════════════════════════ */
+  function briefingL2() {
+    $('briefing-icon').textContent = '💊';
+    $('briefing-title').textContent = 'LEVEL 2：晶片替身置換（代入消去法）';
+    $('briefing-text').innerHTML = `
+      敵方防火牆需要用<b style="color:var(--cyan)">代入消去法</b>來破解！<br><br>
+      🔹 將一個方程式的表達式「<span style="color:var(--cyan)">膠囊</span>」<br>
+      🔹 拖曳塞入另一個方程式的「<span style="color:var(--purple)">目標插槽</span>」中<br>
+      🔹 消去一個未知數，逐步求出答案！
+    `;
+    $('briefing-details').innerHTML = `<span class="badge badge-orange">共 ${L2_ROUNDS.length} 道防火牆</span>`;
+    $('btn-briefing-go').onclick = () => { l2Round = 0; initL2Round(); };
+    showScreen('screen-briefing');
+  }
+
+  function initL2Round() {
+    l2Step = 0;
+    l2CapsuleGrabbed = false;
+    const rd = L2_ROUNDS[l2Round];
+
+    $('l2-progress').style.width = `${(l2Round / L2_ROUNDS.length) * 100}%`;
+    $('l2-round-label').textContent = `防火牆 ${l2Round+1} / ${L2_ROUNDS.length}`;
+    $('l2-instruction').innerHTML = '點擊<span style="color:var(--cyan)">藍色膠囊</span>，再點擊<span style="color:var(--purple)">紫色目標</span>完成代入！';
+    $('l2-feedback').textContent = '';
+    $('l2-step-area').innerHTML = '';
+
+    // render equations
+    const eqDiv = $('l2-equations');
+    eqDiv.innerHTML = `
+      <div class="sub-eq-row" id="l2-eq1-row">
+        <span class="sub-eq-label">${rd.eq1.label}</span>
+        <span>${rd.eq1.var} = </span>
+        <span class="capsule" id="l2-capsule">${rd.eq1.expr}</span>
+      </div>
+      <div class="sub-eq-row" id="l2-eq2-row">
+        <span class="sub-eq-label">${rd.eq2.label}</span>
+        <span>${rd.eq2.textBefore}</span>
+        <span class="drop-target" id="l2-target">${rd.eq2.targetVar}</span>
+        <span>${rd.eq2.textAfter}</span>
+      </div>
+    `;
+
+    // capsule click -> grab
+    const capsule = $('l2-capsule');
+    const target = $('l2-target');
+
+    capsule.addEventListener('click', () => {
+      if (l2Step !== 0) return;
+      AudioSys.click();
+      l2CapsuleGrabbed = !l2CapsuleGrabbed;
+      capsule.classList.toggle('grabbed', l2CapsuleGrabbed);
+      if (l2CapsuleGrabbed) {
+        $('l2-instruction').innerHTML = '現在點擊<span style="color:var(--purple)">紫色目標插槽</span>完成代入！';
+      } else {
+        $('l2-instruction').innerHTML = '點擊<span style="color:var(--cyan)">藍色膠囊</span>，再點擊<span style="color:var(--purple)">紫色目標</span>完成代入！';
+      }
+    });
+
+    target.addEventListener('mouseenter', () => {
+      if (l2CapsuleGrabbed) target.classList.add('hover-over');
+    });
+    target.addEventListener('mouseleave', () => {
+      target.classList.remove('hover-over');
+    });
+    target.addEventListener('click', () => {
+      if (l2Step !== 0 || !l2CapsuleGrabbed) return;
+      performSubstitution(rd);
+    });
+
+    showScreen('screen-l2');
+  }
+
+  function performSubstitution(rd) {
+    l2Step = 1;
+    AudioSys.substitute();
+
+    const capsule = $('l2-capsule');
+    const target = $('l2-target');
+    const rect = target.getBoundingClientRect();
+
+    // animate capsule flying to target
+    target.classList.add('filled');
+    target.textContent = `(${rd.eq1.expr})`;
+    capsule.style.opacity = '0.3';
+    capsule.classList.remove('grabbed');
+    l2CapsuleGrabbed = false;
+
+    streakHit();
+    addScore(150, rect.left + rect.width/2, rect.top);
+
+    $('l2-instruction').innerHTML = '🎉 代入成功！未知數已消去，開始求解！';
+
+    // show substituted equation and solve step
+    setTimeout(() => {
+      const stepArea = $('l2-step-area');
+      stepArea.innerHTML = `
+        <div class="sub-step-panel fade-slide-up">
+          <div class="sub-step-title">📐 STEP 1：展開化簡</div>
+          <div class="sub-step-eq">${rd.substituted}</div>
+          <div class="sub-step-eq" style="color:var(--cyan)">${rd.expanded}</div>
+          <div class="sub-step-title mt-2">❓ ${rd.solveVar} = ?</div>
+          <div class="choice-grid" id="l2-solve-choices"></div>
+        </div>
+      `;
+      const grid = $('l2-solve-choices');
+      const shuffled = shuffleArray(rd.solveChoices);
+      shuffled.forEach(val => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = `${rd.solveVar} = ${val}`;
+        btn.addEventListener('click', () => {
+          if (l2Step !== 1) return;
+          handleL2SolveChoice(val, rd, btn);
+        });
+        grid.appendChild(btn);
+      });
+    }, 800);
+  }
+
+  function handleL2SolveChoice(val, rd, btn) {
+    const rect = btn.getBoundingClientRect();
+    const mx = rect.left + rect.width/2, my = rect.top;
+
+    if (val === rd.solveVal) {
+      l2Step = 2;
+      btn.classList.add('correct-choice');
+      AudioSys.correct(); streakHit();
+      addScore(200, mx, my);
+
+      // show back-substitution
+      setTimeout(() => {
+        const stepArea = $('l2-step-area');
+        stepArea.innerHTML += `
+          <div class="sub-step-panel fade-slide-up mt-2">
+            <div class="sub-step-title">🔄 STEP 2：回代求解</div>
+            <div class="sub-step-eq">已知 ${rd.solveVar} = ${rd.solveVal}，代回 ① 式</div>
+            <div class="sub-step-eq" style="color:var(--green)">${rd.backExpr}</div>
+            <div class="sub-step-title mt-2">❓ ${rd.backVar} = ?</div>
+            <div class="choice-grid" id="l2-back-choices"></div>
+          </div>
+        `;
+        const grid = $('l2-back-choices');
+        const shuffled = shuffleArray(rd.backChoices);
+        shuffled.forEach(v => {
+          const b = document.createElement('button');
+          b.className = 'choice-btn';
+          b.textContent = `${rd.backVar} = ${v}`;
+          b.addEventListener('click', () => {
+            if (l2Step !== 2) return;
+            handleL2BackChoice(v, rd, b);
+          });
+          grid.appendChild(b);
+        });
+      }, 600);
+    } else {
+      btn.classList.add('wrong-choice');
+      AudioSys.wrong(); streakBreak(); loseHP();
+      addScore(-50, mx, my);
+      setTimeout(() => btn.classList.remove('wrong-choice'), 800);
+    }
+  }
+
+  function handleL2BackChoice(val, rd, btn) {
+    const rect = btn.getBoundingClientRect();
+    const mx = rect.left + rect.width/2, my = rect.top;
+
+    if (val === rd.backVal) {
+      l2Step = 3;
+      btn.classList.add('correct-choice');
+      AudioSys.correct(); streakHit();
+      addScore(200, mx, my);
+
+      $('l2-progress').style.width = `${((l2Round+1) / L2_ROUNDS.length) * 100}%`;
+      $('l2-feedback').innerHTML = `✅ 防火牆破解成功！解為 (${rd.solveVar}, ${rd.backVar}) = (${rd.solveVal}, ${rd.backVal})`;
+
+      setTimeout(() => {
+        l2Round++;
+        if (l2Round < L2_ROUNDS.length) {
+          initL2Round();
+        } else {
+          showFinalResult();
+        }
+      }, 2000);
+    } else {
+      btn.classList.add('wrong-choice');
+      AudioSys.wrong(); streakBreak(); loseHP();
+      addScore(-50, mx, my);
+      setTimeout(() => btn.classList.remove('wrong-choice'), 800);
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     FINAL RESULT
+     ═══════════════════════════════════════════ */
+  function showFinalResult() {
+    stopTimer();
+    showHUD(false);
+    AudioSys.victory();
+
+    $('final-score').textContent = score;
+    $('final-rank').textContent = getRankTitle(score);
+
+    const maxPossible = 3400;
+    renderStars($('final-stars'), getStars(score, maxPossible));
+
+    $('final-details').innerHTML = `
+      特工 <b style="color:var(--cyan)">${escHTML(agentName)}</b> 的任務報告<br>
+      Level 1（定義與概念）＋ Level 2（代入消去法）<br>
+      最終得分：<b style="color:var(--gold)">${score}</b> 分
+    `;
+
+    // save
+    const lb = saveToLeaderboard(agentName, score);
+    showScreen('screen-final');
+  }
+
+  /* ═══════════════════════════════════════════
+     INIT & EVENT BINDINGS
+     ═══════════════════════════════════════════ */
+  function startGame() {
+    agentName = $('agent-name').value.trim() || '匿名特工';
+    score = 0; combo = 0; hp = maxHP;
+    updateHUD();
+    showHUD(true);
+
+    // show briefing for L1-1
+    $('briefing-icon').textContent = '📡';
+    $('briefing-title').textContent = 'LEVEL 1-1：代數雷達掃描';
+    $('briefing-text').innerHTML = `
+      敵方頻道攔截到多組代數訊號碎片，<br>
+      只有符合<b style="color:var(--cyan)">「二元一次方程式」</b>定義的訊號<br>
+      才能轉化為防衛能量！<br><br>
+      💡 <b>提示</b>：必須有<span style="color:var(--green)">兩個未知數</span>、<span style="color:var(--green)">次數皆為 1</span>、且為<span style="color:var(--green)">等式</span>！
+    `;
+    $('briefing-details').innerHTML = '<span class="badge badge-cyan">辨識任務</span>';
+    $('btn-briefing-go').onclick = () => {
+      $('btn-l11-confirm').textContent = '📡 掃描確認';
+      $('btn-l11-confirm').onclick = submitL11;
+      initL11();
+    };
+    showScreen('screen-briefing');
+  }
+
+  function resetGame() {
+    showHUD(false);
+    showScreen('screen-menu');
+    $('agent-name').value = '';
+  }
+
+  // button bindings
+  $('btn-start').addEventListener('click', () => { AudioSys.click(); startGame(); });
+  $('btn-lb-menu').addEventListener('click', () => {
+    AudioSys.click();
+    renderLeaderboard();
+    showScreen('screen-leaderboard');
+  });
+  $('btn-lb-back').addEventListener('click', () => {
+    AudioSys.click();
+    showScreen('screen-menu');
+  });
+  $('btn-lb-clear').addEventListener('click', () => {
+    if (confirm('確定要清除所有排行榜紀錄嗎？')) {
+      clearLeaderboard();
+      renderLeaderboard();
+    }
+  });
+  $('btn-final-lb').addEventListener('click', () => {
+    AudioSys.click();
+    renderLeaderboard(agentName, score);
+    showScreen('screen-leaderboard');
+  });
+  $('btn-final-retry').addEventListener('click', () => {
+    AudioSys.click();
+    resetGame();
+  });
+
+  // enter key on name input
+  $('agent-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { AudioSys.click(); startGame(); }
+  });
+
+  return { startGame, resetGame };
+})();
+</script>
+</body>
+</html>
